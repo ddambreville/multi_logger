@@ -12,7 +12,12 @@ Created on 2014/01/06
 @platform : Windows, Linux (PC or robot), OS X
 @summary: This module permits to log datas from several sources
 @source_availables : ALMemory
-@pep8 : Complains without rules R0913 and W0212
+
+@known issues : - For ADC24, in the configuration file, you have to put
+                  channels in order (1, 2, ...., 16).
+                - You cannot choose the order of probe in the log file
+
+@pep8 : Complains without rules R0913, R0915 and W0212
 @version : 1
 
 
@@ -23,13 +28,12 @@ import time
 from naoqi import ALProxy
 import argparse
 import ConfigParser
-import threading
-# from collections import OrderedDict
 
 DEFAULT_CONFIG_FILE = "multi_logger.cfg"
 DEFAULT_PERIOD = 1
 DEFAULT_OUTPUT = "Console"
 DEFAULT_DECIMAL = 2
+DEFAULT_IP = "127.0.0.1"
 
 LOGGERS_CONFIG_FILE = "config.cfg"
 
@@ -58,7 +62,6 @@ class Logger(object):
         self.configFilePath = configFilePath
         self.samplePeriod = samplePeriod
         self.output = output
-        self.mem = ALProxy("ALMemory", robotIP, 9559)
         self.decimal = decimal
         self.configFileDic = self._readConfigFile(self.configFilePath)
         self.loggersConfigfileDic = self._readConfigFile(LOGGERS_CONFIG_FILE)
@@ -69,6 +72,10 @@ class Logger(object):
             except IOError:
                 print "ERROR : File", output, "cannot be oppened."
                 sys.exit()
+
+        # Initialize ALMemory
+        if "ALMemory" in self.configFileDic.keys():
+            self.mem = ALProxy("ALMemory", robotIP, 9559)
 
         # Initialize ADC24 if need to do it
         if "ADC24" in self.configFileDic.keys():
@@ -254,11 +261,12 @@ class Logger(object):
 
 
 def main():
-    """Read the configuration file and begin logging."""
+    """Read the configuration file and start logging."""
     try:
         parser = argparse.ArgumentParser(description="Log datas from ALMemory")
 
-        parser.add_argument("robotIP", help="Robot IP or name")
+        parser.add_argument("-i", "--IP", dest="robotIP", default=DEFAULT_IP,
+                            help="Robot IP or name (default: 127.0.0.1)")
 
         parser.add_argument("-c", "--configFile", dest="configFile",
                             default=DEFAULT_CONFIG_FILE,
@@ -277,8 +285,8 @@ def main():
                             default=DEFAULT_DECIMAL,
                             help="number of decimals for time (default: 2)")
 
-        parser.add_argument(
-            "-v", "--version", action="version", version="%(prog)s 1.1")
+        parser.add_argument("-v", "--version", action="version",
+                            version="%(prog)s 1.0")
 
         args = parser.parse_args()
 
