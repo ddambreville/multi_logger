@@ -9,7 +9,8 @@ Created on 2014/01/06
 @contact: enalepa[at]aldebaran-robotics.com
 @copyright: Aldebaran Robotics 2014
 @requires: naoqi python SDK (Available on Version Gate)
-@platform : Windows, Linux (PC or robot), OS X
+@platform : - Windows, Linux (PC or robot), OS X
+            - If use of ADC24, only Windows
 @summary: This module permits to log datas from several sources
 @source_availables : ALMemory
 
@@ -17,7 +18,7 @@ Created on 2014/01/06
                   channels in order (1, 2, ...., 16).
                 - You cannot choose the order of probe in the log file
 
-@pep8 : Complains without rules R0913, R0915 and W0212
+@pep8 : Complains without rules R0912, R0913, R0915 and W0212
 @version : 1
 
 
@@ -25,9 +26,9 @@ Created on 2014/01/06
 
 import sys
 import time
-from naoqi import ALProxy
 import argparse
 import ConfigParser
+import threading
 
 DEFAULT_CONFIG_FILE = "multi_logger.cfg"
 DEFAULT_PERIOD = 1
@@ -65,6 +66,7 @@ class Logger(object):
         self.decimal = decimal
         self.configFileDic = self._readConfigFile(self.configFilePath)
         self.loggersConfigfileDic = self._readConfigFile(LOGGERS_CONFIG_FILE)
+        self.hasToLog = True
 
         if output != "Console":
             try:
@@ -75,6 +77,7 @@ class Logger(object):
 
         # Initialize ALMemory
         if "ALMemory" in self.configFileDic.keys():
+            from naoqi import ALProxy
             self.mem = ALProxy("ALMemory", robotIP, 9559)
 
         # Initialize ADC24 if need to do it
@@ -236,68 +239,82 @@ class Logger(object):
     #     """
     #     def myTimer(period):
     #         """Define the timer which let to log periodically."""
-    #         if self.hasToLog is True:
-    #             try:
-    #                 threading.Timer(period, myTimer, [period]).start()
-    #                 self.log1Line()
-    #             except KeyboardInterrupt:
-    #                 sys.exit()
+    #         threading.Timer(period, myTimer, [period]).start()
+    #         self.log1Line()
 
     #     myTimer(self.samplePeriod)
 
     def log(self):
-        """
-            Log in file or console.
-        """
+        """Log in file or console."""
 
         # This function uses a sleep.
-        # I tried to use a threding timer calling itself (only way I know on
+        # I tried to use a threding timer calling itself(only way I know on
         # Python to do a periodically timer). It works fine, but with this way
         # we can't catch a Keyboard interrupt and stop properly picologgers ...
         # For the timer implementation, just see "log" above ...
-        while True:
-            self.log1Line()
-            time.sleep(self.samplePeriod)
+
+        def loop(period):
+            """Log 1 line and sleep during a period"""
+            while self.hasToLog is True:
+                self.log1Line()
+                time.sleep(period)
+
+        logThread = threading.Thread(target=loop, args=(self.samplePeriod,))
+        logThread.daemon = True
+        logThread.start()
+
+    def stop(self):
+        """Stop logging."""
+        self.hasToLog = False
+
+        # This dirty sleep is necessary to allow time to the thread to exit
+        # before the main program
+        time.sleep(1)
 
 
 def main():
     """Read the configuration file and start logging."""
+    parser = argparse.ArgumentParser(description="Log datas from ALMemory")
+
+    parser.add_argument("-i", "--IP", dest="robotIP", default=DEFAULT_IP,
+                        help="Robot IP or name (default: 127.0.0.1)")
+
+    parser.add_argument("-c", "--configFile", dest="configFile",
+                        default=DEFAULT_CONFIG_FILE,
+                        help="configuration log file\
+                        (default: multi_logger.cfg)")
+
+    parser.add_argument("-p", "--period", dest="period", type=float,
+                        default=DEFAULT_PERIOD,
+                        help="sampling period in seconds (default: 1 sec)")
+
+    parser.add_argument("-o", "--output", dest="output",
+                        default=DEFAULT_OUTPUT,
+                        help="output file or console (default: Console)")
+
+    parser.add_argument("-d", "--decimal", dest="decimal", type=int,
+                        default=DEFAULT_DECIMAL,
+                        help="number of decimals for time (default: 2)")
+
+    parser.add_argument("-v", "--version", action="version",
+                        version="%(prog)s 1.0")
+
+    args = parser.parse_args()
+
+    logger = Logger(
+        args.robotIP, args.configFile, args.period, args.output,
+        args.decimal)
+
+    logger.log()
+
+    # Continue if the user hit "Enter"
+    # Do nothing specially in case of KeyboardInterrupt (Ctrl-C)
     try:
-        parser = argparse.ArgumentParser(description="Log datas from ALMemory")
-
-        parser.add_argument("-i", "--IP", dest="robotIP", default=DEFAULT_IP,
-                            help="Robot IP or name (default: 127.0.0.1)")
-
-        parser.add_argument("-c", "--configFile", dest="configFile",
-                            default=DEFAULT_CONFIG_FILE,
-                            help="configuration log file\
-                            (default: multi_logger.cfg)")
-
-        parser.add_argument("-p", "--period", dest="period", type=float,
-                            default=DEFAULT_PERIOD,
-                            help="sampling period in seconds (default: 1 sec)")
-
-        parser.add_argument("-o", "--output", dest="output",
-                            default=DEFAULT_OUTPUT,
-                            help="output file or console (default: Console)")
-
-        parser.add_argument("-d", "--decimal", dest="decimal", type=int,
-                            default=DEFAULT_DECIMAL,
-                            help="number of decimals for time (default: 2)")
-
-        parser.add_argument("-v", "--version", action="version",
-                            version="%(prog)s 1.0")
-
-        args = parser.parse_args()
-
-        logger = Logger(
-            args.robotIP, args.configFile, args.period, args.output,
-            args.decimal)
-
-        logger.log()
-
+        raw_input("")
     except KeyboardInterrupt:
-        sys.exit()
+        pass
+    logger.stop()
+
 
 if __name__ == '__main__':
     main()
