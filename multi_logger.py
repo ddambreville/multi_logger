@@ -8,9 +8,17 @@ Created on 2014/01/06
 @author: Emmanuel NALEPA
 @contact: enalepa[at]aldebaran-robotics.com
 @copyright: Aldebaran Robotics 2014
-@requires: naoqi python SDK (Available on Version Gate)
+
+@requires:  - naoqi python SDK  (Available on Version Gate)
+              for logging from ALMemory
+            - PicoHRDL.dll and picolog_adc24_manager.py for logging from
+              Picolog ADC24
+              (Available with git clone
+              git@git.aldebaran.lan:test-nao/picolog_adc24_python_driver.git)
+
 @platform : - Windows, Linux (PC or robot), OS X
             - If use of ADC24, only Windows
+
 @summary: This module permits to log datas from several sources
 @source_availables : ALMemory
 
@@ -36,7 +44,7 @@ DEFAULT_OUTPUT = "Console"
 DEFAULT_DECIMAL = 2
 DEFAULT_IP = "127.0.0.1"
 
-LOGGERS_CONFIG_FILE = "config.cfg"
+LOGGERS_CONFIG_FILE = "probs_config.cfg"
 
 
 class Logger(object):
@@ -86,19 +94,19 @@ class Logger(object):
 
             if "ADC24" not in self.loggersConfigfileDic.keys():
                 print "multi_logger.py ERROR : You want to use ADC24 " + \
-                    "logger but there is no section for it in config.cfg"
+                    "logger but there is no section for it in probs_config.cfg"
                 sys.exit()
 
             dicAdc24 = self.loggersConfigfileDic["ADC24"]
 
             if "NoiseRejection" not in dicAdc24.keys():
                 print "multi_logger.py ERROR : Key \"NoiseRejection\" has " + \
-                    " to be in the \"ADC24\" section of \"config.cfg\"."
+                    " to be in the \"ADC24\" section of \"probs_config.cfg\"."
                 sys.exit()
 
             if "ConversionTime" not in dicAdc24.keys():
                 print "multi_logger.py ERROR : Key \"ConversionTime\" has " + \
-                    " to be in the \"ADC24\" section of \"config.cfg\"."
+                    " to be in the \"ADC24\" section of \"probs_config.cfg\"."
                 sys.exit()
 
             noiseRejection = dicAdc24["NoiseRejection"][0]
@@ -167,12 +175,12 @@ class Logger(object):
 
     @classmethod
     def _listConfigFileSections(cls, configFilePaths):
-        """List all the sections of the config file <configFilePaths>"""
-        config = ConfigParser.ConfigParser()
-        config.optionxform = str
-        config.read(configFilePaths)
+        """List all the sections of the probs_config file <configFilePaths>"""
+        probsConfig = ConfigParser.ConfigParser()
+        probsConfig.optionxform = str
+        probsConfig.read(configFilePaths)
 
-        return config.sections()
+        return probsConfig.sections()
 
     @classmethod
     def _readConfigFileSection(cls, configFilePath, section):
@@ -181,12 +189,12 @@ class Logger(object):
             Returns an dictionnary with keys/values of the section.
         """
 
-        config = ConfigParser.ConfigParser()
-        config.optionxform = str
-        config.read(configFilePath)
+        probsConfig = ConfigParser.ConfigParser()
+        probsConfig.optionxform = str
+        probsConfig.read(configFilePath)
 
-        if config.has_section(section):
-            configSection = config._sections[section]
+        if probsConfig.has_section(section):
+            configSection = probsConfig._sections[section]
             configSection.pop("__name__")
 
             for key, value in configSection.items():

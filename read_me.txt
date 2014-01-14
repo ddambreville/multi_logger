@@ -4,9 +4,18 @@ Date      : 2014/01/13
 Author    : Emmanuel NALEPA
 Contact   : enalepa[at]aldebaran-robotics.com
 Copyright : Aldebaran Robotics 2014
+
 Requires  : - naoqi python SDK  (Available on Version Gate) for logging from ALMemory
             - PicoHRDL.dll and picolog_adc24_manager.py for logging from Picolog ADC24
               (Available with git clone git@git.aldebaran.lan:test-nao/picolog_adc24_python_driver.git)
+
+Platform  : - Windows, Linux (PC or robot), OS X
+            - If use of ADC24, only Windows
+
+Known issues : - For ADC24, in the configuration file, you have to put
+                 channels in order (1, 2, ...., 16).
+               - You cannot choose the order of probes in the log file
+
 Summmary  : This module permits log data from ALMemory and/or Picolog ADC24
 
 **************
@@ -46,10 +55,23 @@ Write [ADC24], and after :
 If the first letter is "#", the line is interpreted as commentary.
 Blank lines are allowed in the configuration file.
 
+If use of PicoLog ADC24:
+Global parameters of this module are set in the file "probs_config.cfg",
+section [ADC24.
+There is :
+- NoiseRejection. It must be "50Hz" or "60Hz"
+- ConversionTime. It must be HRDL_[XX]MS, where [XX] must be 60, 100, 180,
+  340 or 660. This conversion time is in fact the sampling period for each
+  channel.
+
 2) Launch the logger.
 _____________________
 
-Minimum command : python alMemoryLogger.py
+The multi logger can be use as a program or as an API.
+
+If you use it as a program:
+
+Minimum command : python multi_logger
 
 If you run the script on the robot, [IP_ROBOT] could be 127.0.0.1 or
 localhost.
@@ -78,6 +100,11 @@ Note : On linux, you can replace python alMemoryLogger.py
 
 - Where [IPROBOT] (optional) is the IP adress of the robot.
   If not specified, the default IP adress is 127.0.0.1 (localhost)
+
+
+If you use it as an API :
+  An example is given in the file "demo.py"
+
 
 *******************************************************************************
 
