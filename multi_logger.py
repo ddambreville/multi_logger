@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-
 Created on 2014/01/06
+Last modification 2014/03/12
 
 @author: Emmanuel NALEPA
 @contact: enalepa[at]aldebaran-robotics.com
@@ -11,25 +11,31 @@ Created on 2014/01/06
 
 @requires:  - naoqi python SDK  (Available on Version Gate)
               for logging from ALMemory
+
+            - usbtc08.dll and picolog_tc08_manager.py for logging from
+              Picolog TC08
+              (Available with git clone
+              git@git.aldebaran.lan:test-nao/picolog_tc08_python_driver.git)
+
             - PicoHRDL.dll and picolog_adc24_manager.py for logging from
               Picolog ADC24
               (Available with git clone
               git@git.aldebaran.lan:test-nao/picolog_adc24_python_driver.git)
 
 @platform : - Windows, Linux (PC or robot), OS X
-            - If use of ADC24, only Windows
+            - If use of TC08 or/and ADC24, only Windows
 
 @summary: This module permits to log datas from several sources
-@source_availables : ALMemory
+@source availables : ALMemory, Picolog TC08 and Picolog ADC24
 
-@known issues : - For ADC24, in the configuration file, you have to put
+@known issues : - For TC08, in the configuration file, you have to put channels
+                  in order (1, 2 .. 8)
+                - For ADC24, in the configuration file, you have to put
                   channels in order (1, 2, ...., 16).
                 - You cannot choose the order of probe in the log file
 
-@pep8 : Complains without rules R0912, R0913, R0915 and W0212
-@version : 1
-
-
+@pep8 : Complains without rules R0902, R0912, R0913, R0914, R0915 and W0212
+@version : 2
 """
 
 import sys
@@ -88,6 +94,58 @@ class Logger(object):
             from naoqi import ALProxy
             self.mem = ALProxy("ALMemory", robotIP, 9559)
 
+        # Initialize TC08 if need to do it
+        if "TC08" in self.configFileDic.keys():
+            import picolog_tc08_manager
+
+            if "TC08" not in self.loggersConfigfileDic.keys():
+                print "multi_logger.py ERROR : You want to use TC08 " + \
+                    "logger but there is no section for it in probs_config.cfg"
+                sys.exit()
+
+            dicTc08 = self.loggersConfigfileDic["TC08"]
+
+            if "NoiseRejection" not in dicTc08.keys():
+                print "multi_logger.py ERROR : Key \"NoiseRejection\" has " + \
+                    " to be in the \"TC08\" section of \"probs_config.cfg\"."
+                sys.exit()
+
+            noiseRejectionTc08 = dicTc08["NoiseRejection"][0]
+
+            # Opening module
+            sys.stdout.write("TC08 : Opening module ... ")
+            sys.stdout.flush()
+            self.tc08 = picolog_tc08_manager.ModuleTc08()
+            sys.stdout.write("OK\n")
+
+            # Setting noise rejection
+            sys.stdout.write("TC08 : Setting noise rejection module ... ")
+            sys.stdout.flush()
+            self.tc08.setMains(noiseRejectionTc08)
+            sys.stdout.write("OK\n")
+
+            # Enabling channels
+            sys.stdout.write("TC08 : Setting channels ... ")
+            sys.stdout.flush()
+            for channelConfig in self.configFileDic["TC08"].values():
+                (channel, thermoCoupleType) = channelConfig
+
+                self.tc08.setChannel(int(channel), thermoCoupleType)
+
+            sys.stdout.write("OK\n")
+
+            # Getting minimum sampling interval
+            sys.stdout.write("TC08 : Gettint minimum sampling interval ... ")
+            sys.stdout.flush()
+            minimumSamplingInterval = self.tc08.getMinimumIntervalMs()
+            sys.stdout.write("OK\n")
+
+            # Start logging on TC08
+            sys.stdout.write("TC08 : Run ... ")
+            sys.stdout.flush()
+            self.tc08.run(minimumSamplingInterval)
+            sys.stdout.write("OK\n")
+
         # Initialize ADC24 if need to do it
         if "ADC24" in self.configFileDic.keys():
             import picolog_adc24_manager
@@ -109,7 +167,7 @@ class Logger(object):
                     " to be in the \"ADC24\" section of \"probs_config.cfg\"."
                 sys.exit()
 
-            noiseRejection = dicAdc24["NoiseRejection"][0]
+            noiseRejectionAdc24 = dicAdc24["NoiseRejection"][0]
             conversionTime = dicAdc24["ConversionTime"][0]
 
             # Opening module
@@ -121,7 +179,7 @@ class Logger(object):
             # Setting noise rejection
             sys.stdout.write("ADC24 : Setting noise rejection module ... ")
             sys.stdout.flush()
-            self.adc24.setMains(noiseRejection)
+            self.adc24.setMains(noiseRejectionAdc24)
             sys.stdout.write("OK\n")
 
             # Enabling channels
@@ -135,7 +193,7 @@ class Logger(object):
             sys.stdout.write("OK\n")
 
             # Setting intervals (in SetInterval, periods are set in
-            # milli-seconds.)
+            # milli-seconds)
             sys.stdout.write("ADC24 : Setting intervals ... ")
             sys.stdout.flush()
             self.adc24.setInterval(int(samplePeriod * 1000), conversionTime)
@@ -143,7 +201,7 @@ class Logger(object):
             sys.stdout.write("OK\n")
 
             # Start logging on ADC24 (1 sample for each channel at a time,
-            # windowed mode
+            # windowed mode)
             sys.stdout.write("ADC24 : Run ... ")
             sys.stdout.flush()
             self.adc24.run(1, "BM_WINDOW")
@@ -227,6 +285,10 @@ class Logger(object):
                                 for memoryValue in dicToLog.values()]
                 values += self.mem.getListData(alMemoryKeys)
 
+            if probe == "TC08":
+                tc08ValuesDic = self.tc08.getValues()
+                values += [value for value in tc08ValuesDic.values()]
+
             if probe == "ADC24":
                 adc24ValuesDic = self.adc24.getValues()
                 values += [value[0] for value in adc24ValuesDic.values()]
@@ -305,7 +367,7 @@ def main():
                         help="number of decimals for time (default: 2)")
 
     parser.add_argument("-v", "--version", action="version",
-                        version="%(prog)s 1.0")
+                        version="%(prog)s 2.0")
 
     args = parser.parse_args()
 
