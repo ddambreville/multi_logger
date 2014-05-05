@@ -1,6 +1,6 @@
 Name      : multi_logger.py
-Version   : 2.0
-Date      : 2014/03/12
+Version   : 3.0
+Date      : 2014/05/05
 Author    : Emmanuel NALEPA
 Contact   : enalepa[at]aldebaran-robotics.com
 Copyright : Aldebaran Robotics 2014
@@ -10,6 +10,8 @@ Requires  : - naoqi python SDK  (Available on Version Gate) for logging from ALM
               (Available with git clone git@git.aldebaran.lan:test-nao/picolog_tc08_python_driver.git))
             - PicoHRDL.dll and picolog_adc24_manager.py for logging from Picolog ADC24
               (Available with git clone git@git.aldebaran.lan:test-nao/picolog_adc24_python_driver.git)
+            - cpu_interrupt_manager.py for logging CPU usage and interrupts
+              (Available with git clone git@git.aldebaran.lan:test-nao/cpu_interrupt.git)
 
 Platform  : - Windows, Linux (PC or robot), OS X
             - If use of TC08 or/and ADC24, only Windows
@@ -43,7 +45,27 @@ For each line :
 
 First and second "word" has to be separated by ":".
 
-To log from PicoLog TC08:
+To log CPU usage:
+
+Write [CPULoad] and after :
+- First "word" is the variable name to be written in the log file
+  (Example : User)
+- Second "word"  is the type of CPU load to log. Only choices are : User, Nice,
+  System, Idle, IoWait, Irq, SoftIrq.
+
+First and second "word" has to be separated by ":".
+
+To log Interrupts:
+
+Write [Interrupts] and after :
+- First "word" is the variable name to be written in the log file
+  (Example : 5)
+- Second "word"  is the number/name of interrupts to log. Examples : 5 and LOC.
+
+First and second "word" has to be separated by ":".
+
+To log from PicoLog TC08 :
+
 Write [TC08], and after :
 
 - First "word" is the variable name to be written in the log file

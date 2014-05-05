@@ -3,7 +3,7 @@
 
 """
 Created on 2014/01/06
-Last modification 2014/03/12
+Last modification 2014/05/05
 
 @author: Emmanuel NALEPA
 @contact: enalepa[at]aldebaran-robotics.com
@@ -22,20 +22,24 @@ Last modification 2014/03/12
               (Available with git clone
               git@git.aldebaran.lan:test-nao/picolog_adc24_python_driver.git)
 
+            - cpu_interrupt_manager.py for logging CPU usage and interrupts
+              (Available with git clone
+               git@git.aldebaran.lan:test-nao/cpu_interrupt.git)
+
 @platform : - Windows, Linux (PC or robot), OS X
             - If use of TC08 or/and ADC24, only Windows
 
 @summary: This module permits to log datas from several sources
-@source availables : ALMemory, Picolog TC08 and Picolog ADC24
+@source availables : ALMemory, Picolog TC08 and Picolog ADC24, CPU usage and
+                     interrupts
 
 @known issues : - For TC08, in the configuration file, you have to put channels
                   in order (1, 2 .. 8)
                 - For ADC24, in the configuration file, you have to put
                   channels in order (1, 2, ...., 16).
-                - You cannot choose the order of probe in the log file
+                - You cannot choose the order of probes in the log file
 
 @pep8 : Complains without rules R0902, R0912, R0913, R0914, R0915 and W0212
-@version : 2
 """
 
 import sys
@@ -89,7 +93,17 @@ class Logger(object):
                 print "ERROR : File", output, "cannot be oppened."
                 sys.exit()
 
-        # Initialize ALMemory
+        # Initialise CPU Load logger if need to do it
+        if "CPULoad" in self.configFileDic.keys():
+            from cpu_interrupt_manager import CpuLoad
+            self.cpuLoad = CpuLoad()
+
+        # Initialise Interrupts if need to do it
+        if "Interrupts" in self.configFileDic.keys():
+            from cpu_interrupt_manager import Interrupts
+            self.interrupts = Interrupts()
+
+        # Initialize ALMemory if need to do it
         if "ALMemory" in self.configFileDic.keys():
             from naoqi import ALProxy
             self.mem = ALProxy("ALMemory", robotIP, 9559)
@@ -280,6 +294,18 @@ class Logger(object):
         values = [elapsedTimeRound]
 
         for probe, dicToLog in self.configFileDic.items():
+            if probe == "CPULoad":
+                cpuLoadKeys = ["".join(cpuLoadValue)
+                               for cpuLoadValue in dicToLog.values()]
+
+                values += self.cpuLoad.calcLoad(cpuLoadKeys)
+
+            if probe == "Interrupts":
+                interruptsKeys = ["".join(interruptsValue)
+                                  for interruptsValue in dicToLog.values()]
+
+                values += self.interrupts.calcInterrupts(interruptsKeys)
+
             if probe == "ALMemory":
                 alMemoryKeys = ["".join(memoryValue)
                                 for memoryValue in dicToLog.values()]
@@ -326,8 +352,8 @@ class Logger(object):
         def loop(period):
             """Log 1 line and sleep during a period"""
             while self.hasToLog is True:
-                self.log1Line()
                 time.sleep(period)
+                self.log1Line()
 
         logThread = threading.Thread(target=loop, args=(self.samplePeriod,))
         logThread.daemon = True
@@ -367,7 +393,7 @@ def main():
                         help="number of decimals for time (default: 2)")
 
     parser.add_argument("-v", "--version", action="version",
-                        version="%(prog)s 2.0")
+                        version="%(prog)s 3.0")
 
     args = parser.parse_args()
 
