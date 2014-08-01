@@ -242,6 +242,7 @@ class Logger(object):
         else:
             print "Logging ..."
             self.logFile.write(toWrite + "\n")
+            self.logFile.flush()
 
         self.t0 = time.time()
 
@@ -325,6 +326,7 @@ class Logger(object):
             print toWrite
         else:
             self.logFile.write(toWrite + "\n")
+            self.logFile.flush()
 
     # def log(self):
     #     """
@@ -406,7 +408,8 @@ def main():
     # Continue if the user hit "Enter"
     # Do nothing specially in case of KeyboardInterrupt (Ctrl-C)
     try:
-        raw_input("")
+        while(True):
+            time.sleep(0.5)
     except KeyboardInterrupt:
         pass
     logger.stop()
