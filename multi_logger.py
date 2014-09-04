@@ -64,67 +64,72 @@ class Logger(object):
         This class permits to log datas from several sources
     """
 
-    def __init__(self, robotIP, configFilePath=DEFAULT_CONFIG_FILE,
-                 samplePeriod=DEFAULT_PERIOD, output=DEFAULT_OUTPUT,
-                 decimal=DEFAULT_DECIMAL):
+    def __init__(
+        self,
+        robot_ip,
+        config_file_path=DEFAULT_CONFIG_FILE,
+        sample_period=DEFAULT_PERIOD,
+        output=DEFAULT_OUTPUT,
+        decimal=DEFAULT_DECIMAL):
         """
             Initialize the logger.
-            - robotIP : IP adress of the robot
+            - robot_ip : IP adress of the robot
               (Examples : "bn10.local" or "127.0.0.1")
-            - configFilePath (optional) : Path of the configuration file
-            - samplePeriod (optional) : Sample period
+            - config_file_path (optional) : Path of the configuration file
+            - sample_period (optional) : Sample period
             - output (optional) : Output where results will be written
             - decimal (optional) : Number of decimal for the Time variable
         """
 
-        self.robotIP = robotIP
-        self.configFilePath = configFilePath
-        self.samplePeriod = samplePeriod
+        self.robot_ip = robot_ip
+        self.config_file_path = config_file_path
+        self.sample_period = sample_period
         self.output = output
         self.decimal = decimal
-        self.configFileDic = self._readConfigFile(self.configFilePath)
-        self.loggersConfigfileDic = self._readConfigFile(LOGGERS_CONFIG_FILE)
-        self.hasToLog = True
+        self.config_file_dic = self._read_config_file(self.config_file_path)
+        self.loggers_config_file_dic = self._read_config_file(
+            LOGGERS_CONFIG_FILE)
+        self.has_to_log = True
 
         if output != "Console":
             try:
-                self.logFile = open(output, "w")
+                self.log_file = open(output, "w")
             except IOError:
                 print "ERROR : File", output, "cannot be oppened."
                 sys.exit()
 
         # Initialise CPU Load logger if need to do it
-        if "CPULoad" in self.configFileDic.keys():
+        if "CPULoad" in self.config_file_dic.keys():
             from cpu_interrupt_manager import CpuLoad
-            self.cpuLoad = CpuLoad()
+            self.cpu_load = CpuLoad()
 
         # Initialise Interrupts if need to do it
-        if "Interrupts" in self.configFileDic.keys():
+        if "Interrupts" in self.config_file_dic.keys():
             from cpu_interrupt_manager import Interrupts
             self.interrupts = Interrupts()
 
         # Initialize ALMemory if need to do it
-        if "ALMemory" in self.configFileDic.keys():
+        if "ALMemory" in self.config_file_dic.keys():
             from naoqi import ALProxy
-            self.mem = ALProxy("ALMemory", robotIP, 9559)
+            self.mem = ALProxy("ALMemory", robot_ip, 9559)
 
         # Initialize TC08 if need to do it
-        if "TC08" in self.configFileDic.keys():
+        if "TC08" in self.config_file_dic.keys():
             import picolog_tc08_manager
 
-            if "TC08" not in self.loggersConfigfileDic.keys():
+            if "TC08" not in self.loggers_config_file_dic.keys():
                 print "multi_logger.py ERROR : You want to use TC08 " + \
                     "logger but there is no section for it in probs_config.cfg"
                 sys.exit()
 
-            dicTc08 = self.loggersConfigfileDic["TC08"]
+            dic_tc08 = self.loggers_config_file_dic["TC08"]
 
-            if "NoiseRejection" not in dicTc08.keys():
+            if "NoiseRejection" not in dic_tc08.keys():
                 print "multi_logger.py ERROR : Key \"NoiseRejection\" has " + \
                     " to be in the \"TC08\" section of \"probs_config.cfg\"."
                 sys.exit()
 
-            noiseRejectionTc08 = dicTc08["NoiseRejection"][0]
+            noise_rejection_tc08 = dic_tc08["NoiseRejection"][0]
 
             # Opening module
             sys.stdout.write("TC08 : Opening module ... ")
@@ -135,54 +140,54 @@ class Logger(object):
             # Setting noise rejection
             sys.stdout.write("TC08 : Setting noise rejection module ... ")
             sys.stdout.flush()
-            self.tc08.setMains(noiseRejectionTc08)
+            self.tc08.setMains(noise_rejection_tc08)
             sys.stdout.write("OK\n")
 
             # Enabling channels
             sys.stdout.write("TC08 : Setting channels ... ")
             sys.stdout.flush()
-            for channelConfig in self.configFileDic["TC08"].values():
-                (channel, thermoCoupleType) = channelConfig
+            for channel_config in self.config_file_dic["TC08"].values():
+                (channel, thermo_couple_type) = channel_config
 
-                self.tc08.setChannel(int(channel), thermoCoupleType)
+                self.tc08.setChannel(int(channel), thermo_couple_type)
 
             sys.stdout.write("OK\n")
 
             # Getting minimum sampling interval
             sys.stdout.write("TC08 : Gettint minimum sampling interval ... ")
             sys.stdout.flush()
-            minimumSamplingInterval = self.tc08.getMinimumIntervalMs()
+            minimum_sampling_interval = self.tc08.getMinimumIntervalMs()
             sys.stdout.write("OK\n")
 
             # Start logging on TC08
             sys.stdout.write("TC08 : Run ... ")
             sys.stdout.flush()
-            self.tc08.run(minimumSamplingInterval)
+            self.tc08.run(minimum_sampling_interval)
             sys.stdout.write("OK\n")
 
         # Initialize ADC24 if need to do it
-        if "ADC24" in self.configFileDic.keys():
+        if "ADC24" in self.config_file_dic.keys():
             import picolog_adc24_manager
 
-            if "ADC24" not in self.loggersConfigfileDic.keys():
+            if "ADC24" not in self.loggers_config_file_dic.keys():
                 print "multi_logger.py ERROR : You want to use ADC24 " + \
                     "logger but there is no section for it in probs_config.cfg"
                 sys.exit()
 
-            dicAdc24 = self.loggersConfigfileDic["ADC24"]
+            dic_adc24 = self.loggers_config_file_dic["ADC24"]
 
-            if "NoiseRejection" not in dicAdc24.keys():
+            if "NoiseRejection" not in dic_adc24.keys():
                 print "multi_logger.py ERROR : Key \"NoiseRejection\" has " + \
                     " to be in the \"ADC24\" section of \"probs_config.cfg\"."
                 sys.exit()
 
-            if "ConversionTime" not in dicAdc24.keys():
+            if "ConversionTime" not in dic_adc24.keys():
                 print "multi_logger.py ERROR : Key \"ConversionTime\" has " + \
                     " to be in the \"ADC24\" section of \"probs_config.cfg\"."
                 sys.exit()
 
-            noiseRejectionAdc24 = dicAdc24["NoiseRejection"][0]
-            conversionTime = dicAdc24["ConversionTime"][0]
+            noise_rejection_adc24 = dic_adc24["NoiseRejection"][0]
+            conversion_time = dic_adc24["ConversionTime"][0]
 
             # Opening module
             sys.stdout.write("ADC24 : Opening module ... ")
@@ -193,16 +198,16 @@ class Logger(object):
             # Setting noise rejection
             sys.stdout.write("ADC24 : Setting noise rejection module ... ")
             sys.stdout.flush()
-            self.adc24.setMains(noiseRejectionAdc24)
+            self.adc24.setMains(noise_rejection_adc24)
             sys.stdout.write("OK\n")
 
             # Enabling channels
             sys.stdout.write("ADC24 : Setting channels ... ")
             sys.stdout.flush()
-            for channelConfig in self.configFileDic["ADC24"].values():
-                (channel, voltageRange, end) = channelConfig
+            for channel_config in self.config_file_dic["ADC24"].values():
+                (channel, voltage_range, end) = channel_config
 
-                self.adc24.enableAnalogInChannel(int(channel), voltageRange,
+                self.adc24.enableAnalogInChannel(int(channel), voltage_range,
                                                  end)
             sys.stdout.write("OK\n")
 
@@ -210,7 +215,7 @@ class Logger(object):
             # milli-seconds)
             sys.stdout.write("ADC24 : Setting intervals ... ")
             sys.stdout.flush()
-            self.adc24.setInterval(int(samplePeriod * 1000), conversionTime)
+            self.adc24.setInterval(int(sample_period * 1000), conversion_time)
 
             sys.stdout.write("OK\n")
 
@@ -231,102 +236,103 @@ class Logger(object):
             sys.stdout.write("OK\n")
 
         headers = ["Time"]
-        for probe in self.configFileDic.values():
+        for probe in self.config_file_dic.values():
             for key in probe.keys():
                 headers.append(key)
 
-        toWrite = ", ".join(headers).replace(" ", "")
+        to_write = ", ".join(headers).replace(" ", "")
 
         if output == "Console":
-            print toWrite
+            print to_write
         else:
             print "Logging ..."
-            self.logFile.write(toWrite + "\n")
-            self.logFile.flush()
+            self.log_file.write(to_write + "\n")
+            self.log_file.flush()
 
-        self.t0 = time.time()
-
-    @classmethod
-    def _listConfigFileSections(cls, configFilePaths):
-        """List all the sections of the probs_config file <configFilePaths>"""
-        probsConfig = ConfigParser.ConfigParser()
-        probsConfig.optionxform = str
-        probsConfig.read(configFilePaths)
-
-        return probsConfig.sections()
+        self.t_zero = time.time()
 
     @classmethod
-    def _readConfigFileSection(cls, configFilePath, section):
+    def _list_config_file_sections(cls, config_file_paths):
+        """List all the sections of the probs_config file <config_file_paths>"""
+        probs_config = ConfigParser.ConfigParser()
+        probs_config.optionxform = str
+        probs_config.read(config_file_paths)
+
+        return probs_config.sections()
+
+    @classmethod
+    def _read_config_file_section(cls, config_file_path, section):
         """
             Use ConfigParser for reading a configuration file.
             Returns an dictionnary with keys/values of the section.
         """
 
-        probsConfig = ConfigParser.ConfigParser()
-        probsConfig.optionxform = str
-        probsConfig.read(configFilePath)
+        probs_config = ConfigParser.ConfigParser()
+        probs_config.optionxform = str
+        probs_config.read(config_file_path)
 
-        if probsConfig.has_section(section):
-            configSection = probsConfig._sections[section]
-            configSection.pop("__name__")
+        if probs_config.has_section(section):
+            config_section = probs_config._sections[section]
+            config_section.pop("__name__")
 
-            for key, value in configSection.items():
-                configSection[key] = value.split()
+            for key, value in config_section.items():
+                config_section[key] = value.split()
 
-            return configSection
+            return config_section
 
         else:
             return {}
 
-    def _readConfigFile(self, configFilePath):
+    def _read_config_file(self, config_file_path):
         """ Return the dictionnary corresponding to the configuration file."""
         dic = {}
-        for section in self._listConfigFileSections(configFilePath):
-            dic[section] = self._readConfigFileSection(configFilePath, section)
+        for section in self._list_config_file_sections(config_file_path):
+            dic[section] = self._read_config_file_section(
+                config_file_path, section)
 
         return dic
 
     def log1Line(self):
         """Write 1 log line output in file or console."""
 
-        elapsedTime = time.time() - self.t0
-        elapsedTimeRound = round(elapsedTime, self.decimal)
+        elapsed_time = time.time() - self.t_zero
+        elapsed_time_round = round(elapsed_time, self.decimal)
 
-        values = [elapsedTimeRound]
+        values = [elapsed_time_round]
 
-        for probe, dicToLog in self.configFileDic.items():
+        for probe, dic_to_log in self.config_file_dic.items():
             if probe == "CPULoad":
-                cpuLoadKeys = ["".join(cpuLoadValue)
-                               for cpuLoadValue in dicToLog.values()]
+                cpu_load_keys = ["".join(cpuLoadValue)
+                                 for cpuLoadValue in dic_to_log.values()]
 
-                values += self.cpuLoad.calcLoad(cpuLoadKeys)
+                values += self.cpu_load.calcLoad(cpu_load_keys)
 
             if probe == "Interrupts":
-                interruptsKeys = ["".join(interruptsValue)
-                                  for interruptsValue in dicToLog.values()]
+                interrupts_keys = ["".join(interruptsValue)
+                                   for interruptsValue in dic_to_log.values()]
 
-                values += self.interrupts.calcInterrupts(interruptsKeys)
+                values += self.interrupts.calcInterrupts(interrupts_keys)
 
             if probe == "ALMemory":
-                alMemoryKeys = ["".join(memoryValue)
-                                for memoryValue in dicToLog.values()]
-                values += self.mem.getListData(alMemoryKeys)
+                almemory_keys = ["".join(memoryValue)
+                                 for memoryValue in dic_to_log.values()]
+                values += self.mem.getListData(almemory_keys)
 
             if probe == "TC08":
-                tc08ValuesDic = self.tc08.getValues()
-                values += [value for value in tc08ValuesDic.values()]
+                tc08_values_dic = self.tc08.getValues()
+                values += [value for value in tc08_values_dic.values()]
 
             if probe == "ADC24":
-                adc24ValuesDic = self.adc24.getValues()
-                values += [value[0] for value in adc24ValuesDic.values()]
+                adc24_values_dic = self.adc24.getValues()
+                values += [value[0] for value in adc24_values_dic.values()]
 
-        toWrite = str(values).strip('[]').replace(" ", "")
+        to_write = str(values).strip('[]').replace(" ", "")
 
         if self.output == "Console":
-            print toWrite
+            print to_write
         else:
-            self.logFile.write(toWrite + "\n")
-            self.logFile.flush()
+            self.log_file.write(to_write + "\n")
+            self.log_file.flush()
 
     # def log(self):
     #     """
@@ -340,7 +346,7 @@ class Logger(object):
     #         threading.Timer(period, myTimer, [period]).start()
     #         self.log1Line()
 
-    #     myTimer(self.samplePeriod)
+    #     myTimer(self.sample_period)
 
     def log(self):
         """Log in file or console."""
@@ -353,17 +359,17 @@ class Logger(object):
 
         def loop(period):
             """Log 1 line and sleep during a period"""
-            while self.hasToLog is True:
+            while self.has_to_log is True:
                 time.sleep(period)
                 self.log1Line()
 
-        logThread = threading.Thread(target=loop, args=(self.samplePeriod,))
-        logThread.daemon = True
-        logThread.start()
+        log_thread = threading.Thread(target=loop, args=(self.sample_period,))
+        log_thread.daemon = True
+        log_thread.start()
 
     def stop(self):
         """Stop logging."""
-        self.hasToLog = False
+        self.has_to_log = False
 
         # This dirty sleep is necessary to allow time to the thread to exit
         # before the main program
@@ -374,7 +380,7 @@ def main():
     """Read the configuration file and start logging."""
     parser = argparse.ArgumentParser(description="Log datas from ALMemory")
 
-    parser.add_argument("-i", "--IP", dest="robotIP", default=DEFAULT_IP,
+    parser.add_argument("-i", "--IP", dest="robot_ip", default=DEFAULT_IP,
                         help="Robot IP or name (default: 127.0.0.1)")
 
     parser.add_argument("-c", "--configFile", dest="configFile",
@@ -400,7 +406,7 @@ def main():
     args = parser.parse_args()
 
     logger = Logger(
-        args.robotIP, args.configFile, args.period, args.output,
+        args.robot_ip, args.configFile, args.period, args.output,
         args.decimal)
 
     logger.log()
