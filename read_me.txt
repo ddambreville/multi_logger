@@ -149,6 +149,11 @@ Note : On linux, you can replace python alMemoryLogger.py
 If you use it as an API :
   An example is given in the file "demo.py"
 
+******************************
+Real time plot with easy-plot
+******************************
+
+Available soon.
 
 *******************************************************************************
 
