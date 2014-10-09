@@ -48,11 +48,13 @@ import argparse
 import ConfigParser
 import threading
 
+
 DEFAULT_CONFIG_FILE = "multi_logger.cfg"
 DEFAULT_PERIOD = 1
 DEFAULT_OUTPUT = "Console"
 DEFAULT_DECIMAL = 2
 DEFAULT_IP = "127.0.0.1"
+DEFAULT_RT_PLOT = False
 
 LOGGERS_CONFIG_FILE = "probs_config.cfg"
 
@@ -70,7 +72,8 @@ class Logger(object):
         config_file_path=DEFAULT_CONFIG_FILE,
         sample_period=DEFAULT_PERIOD,
         output=DEFAULT_OUTPUT,
-        decimal=DEFAULT_DECIMAL):
+        decimal=DEFAULT_DECIMAL,
+        rt_plot=DEFAULT_RT_PLOT):
         """
             Initialize the logger.
             - robot_ip : IP adress of the robot
@@ -90,6 +93,14 @@ class Logger(object):
         self.loggers_config_file_dic = self._read_config_file(
             LOGGERS_CONFIG_FILE)
         self.has_to_log = True
+        self.rt_plot = rt_plot
+        if self.rt_plot is True:
+            try:
+                import easy_plot_connection
+                self.plot_server = easy_plot_connection.Server(local_plot=True)
+            except ImportError:
+                message = "Impossible to import easy_plot_connection library"
+                raise ImportError(message)
 
         if output != "Console":
             try:
@@ -299,6 +310,7 @@ class Logger(object):
         elapsed_time_round = round(elapsed_time, self.decimal)
 
         values = [elapsed_time_round]
+        curve_names = []
 
         for probe, dic_to_log in self.config_file_dic.items():
             if probe == "CPULoad":
@@ -306,27 +318,35 @@ class Logger(object):
                                  for cpuLoadValue in dic_to_log.values()]
 
                 values += self.cpu_load.calcLoad(cpu_load_keys)
+                curve_names += dic_to_log.keys()
 
             if probe == "Interrupts":
                 interrupts_keys = ["".join(interruptsValue)
                                    for interruptsValue in dic_to_log.values()]
 
                 values += self.interrupts.calcInterrupts(interrupts_keys)
+                curve_names += dic_to_log.keys()
 
             if probe == "ALMemory":
                 almemory_keys = ["".join(memoryValue)
                                  for memoryValue in dic_to_log.values()]
                 values += self.mem.getListData(almemory_keys)
+                curve_names += dic_to_log.keys()
 
             if probe == "TC08":
                 tc08_values_dic = self.tc08.getValues()
                 values += [value for value in tc08_values_dic.values()]
+                curve_names += dic_to_log.keys()
 
             if probe == "ADC24":
                 adc24_values_dic = self.adc24.getValues()
                 values += [value[0] for value in adc24_values_dic.values()]
+                curve_names += dic_to_log.keys()
 
         to_write = str(values).strip('[]').replace(" ", "")
+        if self.rt_plot is True:
+            self.plot_server.add_list_point(elapsed_time,
+                                            zip(curve_names, values))
 
         if self.output == "Console":
             print to_write
@@ -403,18 +423,22 @@ def main():
     parser.add_argument("-v", "--version", action="version",
                         version="%(prog)s 3.0")
 
+    parser.add_argument("-r", "--rt", dest="rt", type=bool,
+                        default=DEFAULT_RT_PLOT,
+                        help="use of easy_plot for real time plot")
+
     args = parser.parse_args()
 
     logger = Logger(
         args.robot_ip, args.configFile, args.period, args.output,
-        args.decimal)
+        args.decimal, args.rt)
 
     logger.log()
 
     # Continue if the user hit "Enter"
     # Do nothing specially in case of KeyboardInterrupt (Ctrl-C)
     try:
-        while(True):
+        while True:
             time.sleep(0.5)
     except KeyboardInterrupt:
         pass
