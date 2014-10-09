@@ -47,6 +47,7 @@ import time
 import argparse
 import ConfigParser
 import threading
+import subprocess
 
 
 DEFAULT_CONFIG_FILE = "multi_logger.cfg"
@@ -246,12 +247,15 @@ class Logger(object):
 
             sys.stdout.write("OK\n")
 
-        headers = ["Time"]
+        self.headers = ["Time"]
         for probe in self.config_file_dic.values():
             for key in probe.keys():
-                headers.append(key)
+                self.headers.append(key)
 
-        to_write = ", ".join(headers).replace(" ", "")
+        self.rt_headers = self.headers
+        self.rt_headers.remove("Time")
+
+        to_write = ", ".join(self.headers).replace(" ", "")
 
         if output == "Console":
             print to_write
@@ -310,7 +314,6 @@ class Logger(object):
         elapsed_time_round = round(elapsed_time, self.decimal)
 
         values = [elapsed_time_round]
-        curve_names = []
 
         for probe, dic_to_log in self.config_file_dic.items():
             if probe == "CPULoad":
@@ -318,35 +321,31 @@ class Logger(object):
                                  for cpuLoadValue in dic_to_log.values()]
 
                 values += self.cpu_load.calcLoad(cpu_load_keys)
-                curve_names += dic_to_log.keys()
 
             if probe == "Interrupts":
                 interrupts_keys = ["".join(interruptsValue)
                                    for interruptsValue in dic_to_log.values()]
 
                 values += self.interrupts.calcInterrupts(interrupts_keys)
-                curve_names += dic_to_log.keys()
 
             if probe == "ALMemory":
                 almemory_keys = ["".join(memoryValue)
                                  for memoryValue in dic_to_log.values()]
                 values += self.mem.getListData(almemory_keys)
-                curve_names += dic_to_log.keys()
 
             if probe == "TC08":
                 tc08_values_dic = self.tc08.getValues()
                 values += [value for value in tc08_values_dic.values()]
-                curve_names += dic_to_log.keys()
 
             if probe == "ADC24":
                 adc24_values_dic = self.adc24.getValues()
                 values += [value[0] for value in adc24_values_dic.values()]
-                curve_names += dic_to_log.keys()
 
         to_write = str(values).strip('[]').replace(" ", "")
         if self.rt_plot is True:
+            values.pop(0)  #remove time value
             self.plot_server.add_list_point(elapsed_time,
-                                            zip(curve_names, values))
+                                            zip(self.rt_headers, values))
 
         if self.output == "Console":
             print to_write
@@ -408,6 +407,9 @@ def main():
                         help="configuration log file\
                         (default: multi_logger.cfg)")
 
+    parser.add_argument("-r", "--rtConfigFile", dest="rtConfigFile",
+                        default=None, help="real time plot configuration file")
+
     parser.add_argument("-p", "--period", dest="period", type=float,
                         default=DEFAULT_PERIOD,
                         help="sampling period in seconds (default: 1 sec)")
@@ -423,17 +425,33 @@ def main():
     parser.add_argument("-v", "--version", action="version",
                         version="%(prog)s 3.0")
 
-    parser.add_argument("-r", "--rt", dest="rt", type=bool,
+    parser.add_argument("--plot", dest="plot", const=True, action="store_const",
                         default=DEFAULT_RT_PLOT,
-                        help="use of easy_plot for real time plot")
+                        help="--plot allow use of real time plot")
 
     args = parser.parse_args()
 
-    logger = Logger(
-        args.robot_ip, args.configFile, args.period, args.output,
-        args.decimal, args.rt)
+    logger = Logger(args.robot_ip, args.configFile,
+                    args.period, args.output, args.decimal, args.plot)
 
     logger.log()
+
+    # ----------------- real time plot -----------------
+
+    # message to user if the plot config file has been forgotten
+    if args.plot is True and args.rtConfigFile is None:
+        print "make sure you have parsed an easy_plot configuration file"
+        print "[command] -r <your_config_file.cfg>"
+
+    # easy_plot subprocess creation
+    if args.plot is True and args.rtConfigFile is not None:
+        popen_list = ['easy_plot']
+        popen_list.extend(['-c', str(args.rtConfigFile)])
+        popen_list.extend(['-i', DEFAULT_IP])
+        popen_list.extend(['-r', str(args.period)])
+
+        # launch easy_plot process
+        subprocess.Popen(popen_list)
 
     # Continue if the user hit "Enter"
     # Do nothing specially in case of KeyboardInterrupt (Ctrl-C)
