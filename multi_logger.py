@@ -58,6 +58,7 @@ DEFAULT_DECIMAL = 2
 DEFAULT_IP = "127.0.0.1"
 DEFAULT_RT_PLOT = False
 DEFAULT_CLASS_GETTER = False
+DEFAULT_QUEUE_SIZE = 5
 
 LOGGERS_CONFIG_FILE = "probs_config.cfg"
 
@@ -77,7 +78,8 @@ class Logger(object):
         output=DEFAULT_OUTPUT,
         decimal=DEFAULT_DECIMAL,
         rt_plot=DEFAULT_RT_PLOT,
-        class_getter=DEFAULT_CLASS_GETTER):
+        class_getter=DEFAULT_CLASS_GETTER,
+        queue_size=DEFAULT_QUEUE_SIZE):
         """
             Initialize the logger.
             - robot_ip : IP adress of the robot
@@ -98,7 +100,7 @@ class Logger(object):
         self.loggers_config_file_dic = self._read_config_file(
             LOGGERS_CONFIG_FILE)
         self.has_to_log = True
-        self.max_queue_size = 10
+        self.max_queue_size = queue_size
         self.queue = Queue(maxsize=self.max_queue_size)
         self.rt_plot = rt_plot
         if self.rt_plot is True:
@@ -461,15 +463,12 @@ def main():
                         default=DEFAULT_RT_PLOT,
                         help="--plot allow use of real time plot")
 
-    parser.add_argument("--classGetter", dest="classGetter", type=bool,
-                        default=DEFAULT_CLASS_GETTER,
-                        help="if True, allow to use class getter")
 
     args = parser.parse_args()
 
     logger = Logger(args.robot_ip, args.configFile,
                     args.period, args.output, args.decimal, args.plot,
-                    args.classGetter)
+                    DEFAULT_CLASS_GETTER, DEFAULT_QUEUE_SIZE)
 
     logger.log()
 
