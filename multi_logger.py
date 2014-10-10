@@ -407,9 +407,13 @@ class Logger(object):
         """Stop logging."""
         self.has_to_log = False
 
+        # Stop using queue. Avoid to run into trouble in threading
+        self.queue.task_done()
+
         # This dirty sleep is necessary to allow time to the thread to exit
         # before the main program
         time.sleep(1)
+
 
     def get_data(self):
         """
