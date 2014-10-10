@@ -153,7 +153,16 @@ If you use it as an API :
 Real time plot with easy-plot
 ******************************
 
-Available soon.
+If you want to perform real time plot, you have to fill two configuration files.
+- multi_logger's one : it needs to know what it has to log.
+- easy_plot's one : it needs to know how to plot the data.
+
+[COMMAND LINE]
+-------------------------------------------------------------------------------
+multi_logger -i <robot_ip> -c <multi_logger_cfg_file> -r <easy_plot_cfg_file>
+-p <period> --plot
+-------------------------------------------------------------------------------
+/! Do not forget "--plot", it allows the real time plot.
 
 *******************************************************************************
 
