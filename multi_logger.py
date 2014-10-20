@@ -390,7 +390,7 @@ class Logger(object):
 
     #     myTimer(self.sample_period)
 
-    def log(self, rt_plot=True):
+    def log(self, rt_plot=False):
         """Log in file or console."""
 
         # This function uses a sleep.
