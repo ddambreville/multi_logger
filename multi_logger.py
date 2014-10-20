@@ -260,7 +260,7 @@ class Logger(object):
             for key in probe.keys():
                 self.headers.append(key)
 
-        self.rt_headers = self.headers
+        self.rt_headers = list(self.headers)
         self.rt_headers.remove("Time")
 
         to_write = ", ".join(self.headers).replace(" ", "")
