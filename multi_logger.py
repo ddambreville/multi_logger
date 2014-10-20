@@ -466,18 +466,19 @@ def main():
 
     args = parser.parse_args()
 
-    logger = Logger(args.robot_ip, args.configFile,
-                    args.period, args.output, args.decimal, args.plot,
-                    DEFAULT_CLASS_GETTER, DEFAULT_QUEUE_SIZE)
-
-    logger.log()
-
     # ----------------- real time plot -----------------
 
     # message to user if the plot config file has been forgotten
     if args.plot is True and args.rtConfigFile is None:
-        print "make sure you have parsed an easy_plot configuration file"
-        print "[command] -r <your_config_file.cfg>"
+        print "ERROR : Make sure you have parsed an easy_plot "+\
+        "configuration file"
+        print
+
+
+    # Logger initialisation
+    logger = Logger(args.robot_ip, args.configFile,
+                    args.period, args.output, args.decimal, args.plot,
+                    DEFAULT_CLASS_GETTER, DEFAULT_QUEUE_SIZE)
 
     # easy_plot subprocess creation
     if args.plot is True and args.rtConfigFile is not None:
@@ -489,6 +490,9 @@ def main():
         # launch easy_plot process
         subprocess.Popen(popen_list)
 
+    # Log
+    logger.log()
+
     # Continue if the user hit "Enter"
     # Do nothing specially in case of KeyboardInterrupt (Ctrl-C)
     try:
@@ -496,6 +500,7 @@ def main():
             time.sleep(0.5)
     except KeyboardInterrupt:
         pass
+
     logger.stop()
 
 
