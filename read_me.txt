@@ -164,10 +164,12 @@ multi_logger -i <robot_ip> -c <multi_logger_cfg_file> -r <easy_plot_cfg_file>
 -------------------------------------------------------------------------------
 /! Do not forget "--plot", it allows the real time plot.
 
+Example : python multi_logger -i <robot_ip> -p 0.05 --plot
+
 *******************************************************************************
 
-If you detected any bug or if you need a special feature, please contact the
-author.
+If you detected any bug or if you need a special feature, please write a
+Redmine in project "Test And Qualification" / TOOLS / MULTI_LOGGER.
 
 Prices :
 - Bug fix     : 1 beer  + 1 chocolate bar
