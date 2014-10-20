@@ -43,6 +43,7 @@ Last modification 2014/05/05
 """
 
 import sys
+import os
 import time
 import argparse
 import ConfigParser
@@ -52,6 +53,7 @@ from Queue import Queue
 
 
 DEFAULT_CONFIG_FILE = "multi_logger.cfg"
+DEFAULT_PLOT_CONFIG_FILE = "easy_plot.cfg"
 DEFAULT_PERIOD = 1
 DEFAULT_OUTPUT = "Console"
 DEFAULT_DECIMAL = 2
@@ -266,7 +268,8 @@ class Logger(object):
         to_write = ", ".join(self.headers).replace(" ", "")
 
         if output == "Console":
-            print to_write
+            if rt_plot == False:
+                print to_write
         else:
             print "Logging ..."
             self.log_file.write(to_write + "\n")
@@ -315,7 +318,7 @@ class Logger(object):
 
         return dic
 
-    def log1Line(self):
+    def log1Line(self, rt_plot=True):
         """Write 1 log line output in file or console."""
 
         elapsed_time = time.time() - self.t_zero
@@ -367,7 +370,8 @@ class Logger(object):
                 self.queue.put(dict_to_add)
 
         if self.output == "Console":
-            print to_write
+            if rt_plot == False:
+                print to_write
         else:
             self.log_file.write(to_write + "\n")
             self.log_file.flush()
@@ -386,7 +390,7 @@ class Logger(object):
 
     #     myTimer(self.sample_period)
 
-    def log(self):
+    def log(self, rt_plot=True):
         """Log in file or console."""
 
         # This function uses a sleep.
@@ -399,7 +403,7 @@ class Logger(object):
             """Log 1 line and sleep during a period"""
             while self.has_to_log is True:
                 time.sleep(period)
-                self.log1Line()
+                self.log1Line(rt_plot)
 
         log_thread = threading.Thread(target=loop, args=(self.sample_period,))
         log_thread.daemon = True
@@ -442,7 +446,9 @@ def main():
                         (default: multi_logger.cfg)")
 
     parser.add_argument("-r", "--rtConfigFile", dest="rtConfigFile",
-                        default=None, help="real time plot configuration file")
+                        default=DEFAULT_PLOT_CONFIG_FILE,
+                        help="real time plot configuration file\
+                        (default: easy_plot.cfg")
 
     parser.add_argument("-p", "--period", dest="period", type=float,
                         default=DEFAULT_PERIOD,
@@ -466,14 +472,13 @@ def main():
 
     args = parser.parse_args()
 
-    # ----------------- real time plot -----------------
+    # Check if Real Time configuration file exists
+    if not os.path.exists (args.rtConfigFile):
+        print "ERROR : File " + args.rtConfigFile + " doesn't exist."
+        print "This file is the easy_plot configuration file, useful for"
+        print "real time plot."
 
-    # message to user if the plot config file has been forgotten
-    if args.plot is True and args.rtConfigFile is None:
-        print "ERROR : Make sure you have parsed an easy_plot "+\
-        "configuration file"
-        print
-
+        sys.exit()
 
     # Logger initialisation
     logger = Logger(args.robot_ip, args.configFile,
@@ -481,7 +486,7 @@ def main():
                     DEFAULT_CLASS_GETTER, DEFAULT_QUEUE_SIZE)
 
     # easy_plot subprocess creation
-    if args.plot is True and args.rtConfigFile is not None:
+    if args.plot is True:
         popen_list = ['easy_plot']
         popen_list.extend(['-c', str(args.rtConfigFile)])
         popen_list.extend(['-i', DEFAULT_IP])
@@ -491,7 +496,7 @@ def main():
         subprocess.Popen(popen_list)
 
     # Log
-    logger.log()
+    logger.log(args.plot)
 
     # Continue if the user hit "Enter"
     # Do nothing specially in case of KeyboardInterrupt (Ctrl-C)
